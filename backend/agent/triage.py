@@ -1,22 +1,22 @@
 """
 Node 2: Triage.
 
-Decides whether the requested procedure requires prior authorization at all.
-If the payer policy says no PA is needed, the agent short-circuits here and
-skips the retrieval, evaluation, and drafting steps entirely - no point
-building a justification for something that doesn't need one.
+Decides whether the requested procedure requires prior authorization, by
+looking up the governing policy. If no PA is needed, the agent
+short-circuits here and skips retrieve/evaluate/draft.
 """
 from agent.state import AgentState
-from data.payer_policies import POLICIES_BY_CODE
+from db.policy_repo import find_policy
 
 
 def triage_node(state: AgentState) -> AgentState:
     code = state["requested_code"]
-    policy = POLICIES_BY_CODE.get(code)
+    note = state["note"]
+    query = f"{note.requested_service.display}. {note.note_text}"
+
+    policy = find_policy(query_text=query, procedure_code=code)
 
     if policy is None:
-        # No policy on file for this code - default to requiring review,
-        # since an unknown procedure is safer to flag than to wave through.
         state["pa_required"] = True
         state.setdefault("trace", []).append(
             f"triage: no policy found for {code}; defaulting to PA required"

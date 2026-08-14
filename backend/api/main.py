@@ -11,7 +11,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.schemas import SubmitRequest, PriorAuthResult
-from api import service, store
+from api import service
+from db import request_repo as store
 
 app = FastAPI(title="Prior Authorization Assistant")
 

@@ -9,7 +9,7 @@ from datetime import date
 from agent.graph import agent
 from models.fhir import Patient, ServiceRequest, ClinicalNote
 from api.schemas import SubmitRequest, PriorAuthResult, CriterionResult
-from api import store
+from db import request_repo as store
 
 
 def process_submission(req: SubmitRequest) -> PriorAuthResult:
