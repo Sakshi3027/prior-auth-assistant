@@ -1,28 +1,30 @@
 """
-Policy retrieval backed by pgvector semantic search. Instead of an exact
-procedure-code lookup, this embeds the incoming request and finds the
-closest policy by cosine distance - the real RAG retrieval step.
-
-Isolated here so the agent's retrieve node just calls find_policy() and
-doesn't care whether it's code-lookup or vector search underneath.
+Policy retrieval. Prefers an exact procedure-code match (precise, and covers
+the normal case). Only falls back to pgvector semantic search when there's
+no code match - and only then loads the embedding model, so the API stays
+light on memory at startup (important on small free-tier instances).
 """
 from sqlalchemy import select
 from db.database import SessionLocal
 from db.models import PolicyRecord
 from data.payer_policies import PayerPolicy
-from sentence_transformers import SentenceTransformer
 
-_model = SentenceTransformer("all-MiniLM-L6-v2")
+_model = None
+
+
+def _get_model():
+    """Lazily load the embedding model only when a fuzzy search is needed."""
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+        _model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _model
 
 
 def find_policy(query_text: str, procedure_code: str | None = None) -> PayerPolicy | None:
-    """
-    Semantic search over policy embeddings. If a procedure code is given we
-    still prefer an exact code match when one exists (codes are precise);
-    otherwise we fall back to nearest-neighbour on the text embedding.
-    """
     session = SessionLocal()
     try:
+        # 1. Exact code match - the precise, common path. No model needed.
         if procedure_code:
             exact = session.execute(
                 select(PolicyRecord).where(PolicyRecord.procedure_code == procedure_code)
@@ -30,7 +32,8 @@ def find_policy(query_text: str, procedure_code: str | None = None) -> PayerPoli
             if exact:
                 return _to_domain(exact)
 
-        emb = _model.encode(query_text).tolist()
+        # 2. Fallback: semantic search. Loads the model on first use only.
+        emb = _get_model().encode(query_text).tolist()
         nearest = session.execute(
             select(PolicyRecord).order_by(PolicyRecord.embedding.cosine_distance(emb)).limit(1)
         ).scalar_one_or_none()
