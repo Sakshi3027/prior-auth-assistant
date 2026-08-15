@@ -1,43 +1,28 @@
 """
-Policy retrieval. Prefers an exact procedure-code match (precise, and covers
-the normal case). Only falls back to pgvector semantic search when there's
-no code match - and only then loads the embedding model, so the API stays
-light on memory at startup (important on small free-tier instances).
+Policy retrieval for the serving API: exact procedure-code lookup.
+
+Embeddings live in the policies table (generated in the offline seeding
+step, db/init_db.py) and power semantic search in development. The deployed
+API deliberately uses precise code matching only, so it doesn't need to load
+the embedding model / torch at runtime - keeping the service lightweight
+enough for small instances.
 """
 from sqlalchemy import select
 from db.database import SessionLocal
 from db.models import PolicyRecord
 from data.payer_policies import PayerPolicy
 
-_model = None
-
-
-def _get_model():
-    """Lazily load the embedding model only when a fuzzy search is needed."""
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
-
 
 def find_policy(query_text: str, procedure_code: str | None = None) -> PayerPolicy | None:
     session = SessionLocal()
     try:
-        # 1. Exact code match - the precise, common path. No model needed.
         if procedure_code:
-            exact = session.execute(
+            rec = session.execute(
                 select(PolicyRecord).where(PolicyRecord.procedure_code == procedure_code)
             ).scalar_one_or_none()
-            if exact:
-                return _to_domain(exact)
-
-        # 2. Fallback: semantic search. Loads the model on first use only.
-        emb = _get_model().encode(query_text).tolist()
-        nearest = session.execute(
-            select(PolicyRecord).order_by(PolicyRecord.embedding.cosine_distance(emb)).limit(1)
-        ).scalar_one_or_none()
-        return _to_domain(nearest) if nearest else None
+            if rec:
+                return _to_domain(rec)
+        return None
     finally:
         session.close()
 
