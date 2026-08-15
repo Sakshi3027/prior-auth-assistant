@@ -16,10 +16,13 @@ from db import request_repo as store
 
 app = FastAPI(title="Prior Authorization Assistant")
 
-# Allow the local Next.js dev server. Deployed origins get added later.
+# Allow localhost for dev, and any of this project's Vercel URLs
+# (production + preview) via regex - robust against trailing slashes
+# and changing preview URLs.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"https://prior-auth-assistant.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
