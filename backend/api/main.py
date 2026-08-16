@@ -37,6 +37,9 @@ def health():
 def submit(req: SubmitRequest):
     return service.process_submission(req)
 
+@app.post("/api/appeal")
+def appeal(req: SubmitRequest):
+    return {"appeal": service.draft_appeal_for(req)}
 
 @app.get("/api/requests", response_model=list[PriorAuthResult])
 def list_requests():

@@ -51,3 +51,13 @@ export async function getAnalytics() {
   if (!res.ok) throw new Error(`Analytics failed: ${res.status}`);
   return res.json();
 }
+
+export async function draftAppeal(body: SubmitRequest): Promise<{ appeal: string }> {
+  const res = await fetch(`${API_BASE}/appeal`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Appeal failed: ${res.status}`);
+  return res.json();
+}

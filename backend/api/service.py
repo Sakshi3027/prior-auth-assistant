@@ -7,17 +7,16 @@ import uuid
 from datetime import date
 
 from agent.graph import agent
+from agent.appeal import draft_appeal
 from models.fhir import Patient, ServiceRequest, ClinicalNote
 from api.schemas import SubmitRequest, PriorAuthResult, CriterionResult
 from db import request_repo as store
 
 
-def process_submission(req: SubmitRequest) -> PriorAuthResult:
-    # Build a minimal FHIR ClinicalNote from the raw submission. Patient
-    # details beyond the name aren't needed for adjudication, so we use
-    # placeholders - the note text and procedure code carry the signal.
+def _build_note(req: SubmitRequest, reason: str) -> ClinicalNote:
+    """Build a minimal FHIR ClinicalNote from a raw submission."""
     given, _, family = req.patient_name.partition(" ")
-    note = ClinicalNote(
+    return ClinicalNote(
         patient=Patient(
             id="PT-" + uuid.uuid4().hex[:8],
             given_name=given or req.patient_name,
@@ -29,11 +28,14 @@ def process_submission(req: SubmitRequest) -> PriorAuthResult:
         requested_service=ServiceRequest(
             code=req.procedure_code,
             display=req.procedure_name,
-            reason="Submitted via API",
+            reason=reason,
         ),
         note_text=req.note_text,
     )
 
+
+def process_submission(req: SubmitRequest) -> PriorAuthResult:
+    note = _build_note(req, "Submitted via API")
     final = agent.invoke({"note": note})
 
     result = PriorAuthResult(
@@ -42,9 +44,7 @@ def process_submission(req: SubmitRequest) -> PriorAuthResult:
         procedure_code=req.procedure_code,
         procedure_name=req.procedure_name,
         pa_required=bool(final.get("pa_required")),
-        criteria=[
-            CriterionResult(**c) for c in final.get("criteria_checks", [])
-        ],
+        criteria=[CriterionResult(**c) for c in final.get("criteria_checks", [])],
         draft=final.get("draft"),
         confidence=final.get("confidence"),
         trace=final.get("trace", []),
@@ -52,3 +52,10 @@ def process_submission(req: SubmitRequest) -> PriorAuthResult:
 
     store.save(result)
     return result
+
+
+def draft_appeal_for(req: SubmitRequest) -> str:
+    """Rebuild the agent state for a submission and draft an appeal letter."""
+    note = _build_note(req, "Appeal draft")
+    final = agent.invoke({"note": note})
+    return draft_appeal(final)

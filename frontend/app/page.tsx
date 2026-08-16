@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { submitRequest, PriorAuthResult } from "@/lib/api";
+import { submitRequest, draftAppeal, PriorAuthResult } from "@/lib/api";
 
 const SAMPLE = {
   patient_name: "Jordan Reyes",
@@ -21,6 +21,8 @@ export default function SubmitPage() {
   const [result, setResult] = useState<PriorAuthResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [appeal, setAppeal] = useState<string | null>(null);
+  const [appealing, setAppealing] = useState(false);
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm({ ...form, [k]: e.target.value });
@@ -29,12 +31,26 @@ export default function SubmitPage() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setAppeal(null);
     try {
       setResult(await submitRequest(form));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onAppeal() {
+    setAppealing(true);
+    setAppeal(null);
+    try {
+      const res = await draftAppeal(form);
+      setAppeal(res.appeal);
+    } catch (e) {
+      setAppeal(e instanceof Error ? e.message : "Appeal failed");
+    } finally {
+      setAppealing(false);
     }
   }
 
@@ -68,7 +84,6 @@ export default function SubmitPage() {
 
       {result && (
         <div className="mt-6 overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02]">
-          {/* Verdict banner */}
           <div className={`flex items-center justify-between px-6 py-4 ${result.pa_required ? "bg-amber-500/10" : "bg-emerald-500/10"}`}>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Determination</p>
@@ -103,6 +118,25 @@ export default function SubmitPage() {
               <div>
                 <p className={label}>Drafted request</p>
                 <p className="mt-2 whitespace-pre-wrap rounded-xl border border-white/5 bg-white/[0.02] p-4 text-sm leading-relaxed text-slate-300">{result.draft}</p>
+              </div>
+            )}
+
+            {/* Appeal: offered when any criterion is not clearly met */}
+            {result.criteria.some((c) => c.status !== "met") && (
+              <div className="border-t border-white/5 pt-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={label}>Likely to be challenged</p>
+                    <p className="mt-1 text-sm text-slate-400">Some criteria are unmet or uncertain. Draft an appeal arguing for reconsideration.</p>
+                  </div>
+                  <button onClick={onAppeal} disabled={appealing}
+                    className="shrink-0 rounded-lg border border-emerald-500/40 px-4 py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/10 disabled:opacity-50">
+                    {appealing ? "Drafting..." : "Draft appeal"}
+                  </button>
+                </div>
+                {appeal && (
+                  <p className="mt-4 whitespace-pre-wrap rounded-xl border border-white/5 bg-white/[0.02] p-4 text-sm leading-relaxed text-slate-300">{appeal}</p>
+                )}
               </div>
             )}
           </div>
