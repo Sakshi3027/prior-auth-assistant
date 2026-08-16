@@ -20,6 +20,10 @@ export interface PriorAuthResult {
   draft: string | null;
   confidence: number | null;
   trace: string[];
+  overridden?: boolean;
+  override_decision?: string | null;
+  override_reason?: string | null;
+  override_by?: string | null;
 }
 
 export interface SubmitRequest {
@@ -59,5 +63,17 @@ export async function draftAppeal(body: SubmitRequest): Promise<{ appeal: string
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Appeal failed: ${res.status}`);
+  return res.json();
+}
+
+export async function overrideRequest(
+  request_id: string, decision: string, reason: string, reviewer: string
+): Promise<PriorAuthResult> {
+  const res = await fetch(`${API_BASE}/override`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id, decision, reason, reviewer }),
+  });
+  if (!res.ok) throw new Error(`Override failed: ${res.status}`);
   return res.json();
 }

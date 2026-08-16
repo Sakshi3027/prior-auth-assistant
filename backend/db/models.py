@@ -21,6 +21,11 @@ class RequestRecord(Base):
     draft: Mapped[str | None] = mapped_column(Text, nullable=True)
     criteria: Mapped[list] = mapped_column(JSON, default=list)
     trace: Mapped[list] = mapped_column(JSON, default=list)
+    # Human-in-the-loop override (null until a reviewer acts)
+    overridden: Mapped[bool] = mapped_column(Boolean, default=False)
+    override_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    override_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    override_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
 
 class PolicyRecord(Base):

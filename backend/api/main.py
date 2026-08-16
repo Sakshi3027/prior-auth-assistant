@@ -10,7 +10,7 @@ Endpoints:
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.schemas import SubmitRequest, PriorAuthResult
+from api.schemas import SubmitRequest, PriorAuthResult, OverrideRequest
 from api import service
 from db import request_repo as store
 
@@ -40,6 +40,14 @@ def submit(req: SubmitRequest):
 @app.post("/api/appeal")
 def appeal(req: SubmitRequest):
     return {"appeal": service.draft_appeal_for(req)}
+
+@app.post("/api/override", response_model=PriorAuthResult)
+def override(req: OverrideRequest):
+    from db import request_repo
+    result = request_repo.apply_override(req.request_id, req.decision, req.reason, req.reviewer)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return result
 
 @app.get("/api/requests", response_model=list[PriorAuthResult])
 def list_requests():

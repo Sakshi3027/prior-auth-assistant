@@ -57,4 +57,24 @@ def _to_schema(r: RequestRecord) -> PriorAuthResult:
         draft=r.draft,
         confidence=r.confidence,
         trace=r.trace or [],
+        overridden=r.overridden or False,
+        override_decision=r.override_decision,
+        override_reason=r.override_reason,
+        override_by=r.override_by,
     )
+
+def apply_override(request_id: str, decision: str, reason: str, reviewer: str) -> PriorAuthResult | None:
+    session = SessionLocal()
+    try:
+        r = session.get(RequestRecord, request_id)
+        if r is None:
+            return None
+        r.overridden = True
+        r.override_decision = decision
+        r.override_reason = reason
+        r.override_by = reviewer
+        session.commit()
+        session.refresh(r)
+        return _to_schema(r)
+    finally:
+        session.close()

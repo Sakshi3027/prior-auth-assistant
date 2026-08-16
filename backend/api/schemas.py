@@ -31,3 +31,13 @@ class PriorAuthResult(BaseModel):
     draft: Optional[str]
     confidence: Optional[float]
     trace: list[str]
+    overridden: bool = False
+    override_decision: Optional[str] = None
+    override_reason: Optional[str] = None
+    override_by: Optional[str] = None
+
+class OverrideRequest(BaseModel):
+    request_id: str
+    decision: str          # "APPROVED" or "DENIED"
+    reason: str
+    reviewer: str
