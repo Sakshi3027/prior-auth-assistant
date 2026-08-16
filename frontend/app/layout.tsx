@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 
 const nav = [
   { href: "/", label: "Submit", icon: "＋" },
+  { href: "/batch", label: "Batch", icon: "⚡" },
   { href: "/flow", label: "Agent flow", icon: "◈" },
   { href: "/requests", label: "Requests", icon: "▤" },
   { href: "/analytics", label: "Analytics", icon: "▧" },

@@ -77,3 +77,13 @@ export async function overrideRequest(
   if (!res.ok) throw new Error(`Override failed: ${res.status}`);
   return res.json();
 }
+
+export async function runBatch(reqs: SubmitRequest[]): Promise<PriorAuthResult[]> {
+  const res = await fetch(`${API_BASE}/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(reqs),
+  });
+  if (!res.ok) throw new Error(`Batch failed: ${res.status}`);
+  return res.json();
+}

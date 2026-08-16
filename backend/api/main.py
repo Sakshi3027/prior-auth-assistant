@@ -49,6 +49,11 @@ def override(req: OverrideRequest):
         raise HTTPException(status_code=404, detail="Request not found")
     return result
 
+@app.post("/api/batch", response_model=list[PriorAuthResult])
+def batch(reqs: list[SubmitRequest]):
+    """Process a queue of submissions through the agent in one call."""
+    return [service.process_submission(r) for r in reqs]
+
 @app.get("/api/requests", response_model=list[PriorAuthResult])
 def list_requests():
     return store.list_all()
