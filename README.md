@@ -109,15 +109,25 @@ npm run dev                    # http://localhost:3000
 
 ---
 
-## Designed to Extend
+## Advanced Capabilities
 
-Architected from day one so these are additive, not rewrites:
+Beyond the core adjudication flow, the platform includes five production-minded extensions, each built on the same isolated agent and policy layers:
 
-- **CMS-compliant FHIR PAS API layer** — expose decisions in the FHIR Prior Authorization Support format payers must adopt
-- **Appeals agent** — a second agent that drafts an appeal when a request is likely to be denied
-- **Batch mode** — process a queue of pending requests
-- **Payer-policy ingestion pipeline** — chunk real payer-policy PDFs into the vector store
-- **Human-in-the-loop review** — reviewer approve/edit workflow
+- **Appeals agent** — when a request has unmet or uncertain criteria (a likely denial), a second agent drafts an appeal letter that argues for reconsideration, honestly acknowledging the gaps while leaning on the supporting evidence that does exist.
+- **Human-in-the-loop override** — a reviewer can override any determination (approve what the agent flagged, or deny what it approved) with a reason, persisted and surfaced as an audit badge. Mirrors the auditor override on the companion claims platform.
+- **Batch mode** — processes a whole queue of pending requests in one run, useful for overnight processing of a day's submissions, feeding richer analytics.
+- **FHIR PAS API layer** — exposes each decision as a FHIR **Prior Authorization Support** `Claim` + `ClaimResponse` bundle, the format the CMS interoperability rule mandates for prior authorization over FHIR. `GET /api/fhir/claim/{id}`.
+- **Payer-policy PDF ingestion** — a pipeline that takes a real payer-policy PDF, extracts and structures it with an LLM, embeds it, and loads it into the policies table. Because the policy layer is isolated from the agent, an ingested policy is immediately adjudicable with zero code changes.
+
+---
+
+## Designed This Way on Purpose
+
+Three early decisions made those extensions additive rather than rewrites:
+
+- **Five discrete agent nodes** — so an appeals path or a new step slots in without disturbing the pipeline.
+- **An isolated policy-retrieval layer** — so real ingested policies flow into the same table the agent already reads from.
+- **FHIR-modeled data from day one** — so the CMS-compliant PAS layer was a mapping, not a migration.
 
 ---
 
