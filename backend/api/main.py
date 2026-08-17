@@ -21,7 +21,8 @@ app = FastAPI(title="Prior Authorization Assistant")
 # and changing preview URLs.
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:3000",
+    allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"https://prior-auth-assistant.*\.vercel\.app",
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -53,15 +54,14 @@ def batch(reqs: list[SubmitRequest]):
     """Process a queue of submissions through the agent in one call."""
     return [service.process_submission(r) for r in reqs]
 
-@app.get("/api/fhir/claim/{request_id}")
-def fhir_claim(request_id: str):
-    """Return a processed request as a FHIR PAS Claim + ClaimResponse bundle."""
-    from db import request_repo
-    from api import fhir_pas
-    result = request_repo.get(request_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Request not found")
-    return fhir_pas.to_pas_bundle(result)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_origin_regex=r"https://prior-auth-assistant.*\.vercel\.app",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/api/requests", response_model=list[PriorAuthResult])
 def list_requests():
